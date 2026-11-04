@@ -411,7 +411,13 @@ func (k *kustomize) Build(opts *v1alpha1.ApplicationSourceKustomize, kustomizeOp
 	}
 	cmd.Dir = k.repoRoot
 	commands = append(commands, executil.GetCommandArgsToLog(cmd))
+	unlock := func() {}
+	if kustomizeOptions != nil && isHelmEnabled(kustomizeOptions.BuildOptions) {
+		// Builds that inflate Helm charts into the same chart home must not run at the same time.
+		unlock = lockHelmChartHomes(k.repoRoot, k.path)
+	}
 	out, err := executil.Run(cmd)
+	unlock()
 	if err != nil {
 		return nil, nil, nil, err
 	}
